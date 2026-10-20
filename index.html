@@ -309,6 +309,26 @@ body.light .library-status{color:#17694d}
 body.light #textInput{background:#fff}
 @media(max-width:760px){.library-grid{grid-template-columns:1fr}.library-actions>*{width:100%}.library-heading{align-items:flex-start}.library-footer{display:block}.library-footer label{display:block;margin-bottom:9px}}
 
+
+/* Student grade acknowledgment: an honor-system browsing aid, not age verification. */
+.grade-agreement{max-width:1000px;margin:15px auto;background:linear-gradient(130deg,#18364b,#14392f);color:#fff;text-align:left;border:2px solid #87c7a9;padding:21px;border-radius:15px;box-shadow:0 12px 35px #0005}
+.grade-agreement h2{margin:0 0 8px;font-size:23px}
+.grade-agreement p{font-size:15px;line-height:1.55;color:#e5eff4;margin:7px 0 13px}
+.grade-agreement label{font-size:15px;line-height:1.5}
+.grade-row{display:flex;gap:16px;align-items:end;flex-wrap:wrap}
+.grade-row label{display:flex;flex-direction:column;gap:7px;font-weight:bold}
+.grade-row select{background:#f8fbfd;color:#132331;border:2px solid #aac1ca;min-width:160px;min-height:46px}
+.grade-check{display:flex;gap:12px;align-items:flex-start;margin:14px 0;cursor:pointer}
+.grade-check input{height:21px;width:21px;accent-color:#3fd5a4;flex:0 0 21px;margin:2px 0 0}
+.grade-check span{font-size:15px}
+#confirmGrade{min-height:46px;background:#ffd46e;color:#172b3a;font-weight:bold;padding:11px 18px}
+#confirmGrade:disabled{opacity:.45;cursor:not-allowed}
+.grade-verified{max-width:1000px;margin:12px auto;padding:11px 15px;background:var(--panel);border:1px solid #599585;border-radius:11px;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;text-align:left}
+.grade-verified strong{color:#56dba8}
+.grade-verified button{background:#35586f;color:#fff;font-size:13px;padding:8px 12px}
+body.light .grade-verified strong{color:#166b4c}
+.grade-locked{display:none!important}
+@media(max-width:650px){.grade-row{display:block}.grade-row select{width:100%}.grade-verified>*{width:100%}.grade-agreement{padding:15px}}
 </style>
 </head>
 
@@ -326,12 +346,26 @@ body.light #textInput{background:#fff}
 
 <h1>A.S.C.E.N.D.A.N.T. Reader</h1>
 <p class="small">Adaptive Serialized Cognitive Enhancement for Neural Decoding and Accelerated Narrative Training</p>
+<section id="gradeAgreement" class="grade-agreement" aria-labelledby="gradeAgreementTitle">
+ <h2 id="gradeAgreementTitle">📚 Before You Choose a Book</h2>
+ <p>Choose your actual school grade. The library will show books in your grade range or below. Some classic books contain difficult vocabulary or outdated language—follow your teacher's directions when selecting a title.</p>
+ <div class="grade-row"><label for="studentGrade">I am currently in grade
+ <select id="studentGrade"><option value="">Select your grade…</option><option value="1">Grade 1</option><option value="2">Grade 2</option><option value="3">Grade 3</option><option value="4">Grade 4</option><option value="5">Grade 5</option><option value="6">Grade 6</option><option value="7">Grade 7</option><option value="8">Grade 8</option><option value="9">Grade 9</option><option value="10">Grade 10</option><option value="11">Grade 11</option><option value="12">Grade 12</option></select></label></div>
+ <label class="grade-check" for="gradePromise"><input id="gradePromise" type="checkbox"><span>I have selected my <strong>actual grade</strong>. I agree to choose books recommended for my grade range or below, and to ask my teacher before reading a more advanced or sensitive book.</span></label>
+ <button id="confirmGrade" type="button" disabled>✓ I agree — Open My Book Library</button>
+ <p class="small" style="color:#bed8e2">No name, birth date, or account required. This is a student honesty agreement, not an identity or age-verification system.</p>
+</section>
+<div id="gradeVerified" class="grade-verified grade-locked" aria-live="polite">
+ <span><strong id="gradeVerifiedText">Grade confirmed</strong> · Books for your grade range or below</span>
+ <button id="changeGrade" type="button">Change grade / Restart agreement</button>
+</div>
 
 
-<section class="panel library-panel" aria-labelledby="libraryTitle">
- <div class="library-heading"><div><h2 id="libraryTitle">📚 Choose a Reading</h2><p>Choose a complete public-domain book, select a chapter or short part, and read. You can still paste any passage below.</p></div><span class="library-chip">43 complete original books</span></div>
+
+<section class="panel library-panel grade-locked" id="bookLibraryPanel" aria-labelledby="libraryTitle">
+ <div class="library-heading"><div><h2 id="libraryTitle">📚 Choose a Reading</h2><p>Choose a complete public-domain book, select a chapter or short part, and read. You can still paste any passage below.</p></div><span class="library-chip">51 complete original books</span></div>
  <div class="library-grid">
-  <label for="gradeBand">Grade range <select id="gradeBand"><option value="all">All grade ranges</option><option value="1-2">Grades 1–2</option><option value="3-5">Grades 3–5</option><option value="6-8" selected>Grades 6–8</option><option value="9-12">Grades 9–12</option></select></label>
+  <label for="gradeBand">Grade range <select id="gradeBand" disabled><option value="all">All books allowed for my grade</option></select></label>
   <label for="bookSelect">Choose a book <select id="bookSelect"></select></label>
   <label for="sectionSelect">Reading section <select id="sectionSelect"></select></label>
  </div>
@@ -514,7 +548,56 @@ function updateReadingEstimates(){
 }
 
 function libraryStatus(text,isError=false){const el=document.getElementById('libraryStatus');el.textContent=text;el.classList.toggle('error',isError);}
-function selectedBook(){return GUTENBERG_BOOKS.find(book=>String(book.id)===document.getElementById('bookSelect').value)||null;}
+// Student acknowledgment controls the visible catalog for this browser tab only.
+// Grade bands are editorial recommendations, not verified reading ages or access control.
+let confirmedGrade=0;
+const gradeBandMax={'1-2':2,'3-5':5,'6-8':8,'9-12':12};
+function maxBandForGrade(grade){return grade<=2?'1-2':grade<=5?'3-5':grade<=8?'6-8':'9-12';}
+function gradeEligible(book){return confirmedGrade>0&&gradeBandMax[book.band]<=gradeBandMax[maxBandForGrade(confirmedGrade)];}
+function allowedGrades(){const max=gradeBandMax[maxBandForGrade(confirmedGrade)];return Object.keys(gradeBandMax).filter(b=>gradeBandMax[b]<=max);}
+function configureGradePicker(){
+ const grade=Number(document.getElementById('studentGrade').value);
+ document.getElementById('confirmGrade').disabled=!(grade>=1&&grade<=12&&document.getElementById('gradePromise').checked);
+}
+function acknowledgeGrade(){
+ const grade=Number(document.getElementById('studentGrade').value);
+ if(!(grade>=1&&grade<=12&&document.getElementById('gradePromise').checked))return;
+ confirmedGrade=grade;
+ const select=document.getElementById('gradeBand');select.replaceChildren();
+ select.add(new Option('All books in my grade or below','all'));
+ allowedGrades().forEach(b=>select.add(new Option('Grades '+b.replace('-', '–'),b)));
+ select.value='all';select.disabled=false;
+ document.getElementById('gradeAgreement').classList.add('grade-locked');
+ document.getElementById('gradeVerified').classList.remove('grade-locked');
+ document.getElementById('bookLibraryPanel').classList.remove('grade-locked');
+ document.getElementById('gradeVerifiedText').textContent='Grade '+grade+' confirmed';
+ document.getElementById('bookSearch').value='';
+ document.getElementById('bookAuthor').value='all';
+ document.getElementById('bookGenre').value='all';
+ renderBooks();
+}
+function restartGradeAgreement(){
+ // Remove any loaded title when a user changes grade on a shared device.
+ pauseReader();resetReader();loadedBookId=null;loadedSectionIndex=-1;
+ document.getElementById('textInput').value='';
+ confirmedGrade=0;currentBookRequest++;
+ document.getElementById('studentGrade').value='';
+ document.getElementById('gradePromise').checked=false;
+ document.getElementById('gradeVerified').classList.add('grade-locked');
+ document.getElementById('bookLibraryPanel').classList.add('grade-locked');
+ document.getElementById('gradeAgreement').classList.remove('grade-locked');
+ const band=document.getElementById('gradeBand');band.disabled=true;band.replaceChildren();band.add(new Option('Choose grade first','all'));
+ document.getElementById('bookSelect').replaceChildren();document.getElementById('sectionSelect').replaceChildren();
+ document.getElementById('gutenbergLink').href='https://www.gutenberg.org/';
+ document.getElementById('bookDescription').textContent='';
+ document.getElementById('libraryStatus').textContent='';
+ document.getElementById('bookWordCount').textContent='';
+ document.getElementById('bookResultCount').textContent='';
+ updateNav();configureGradePicker();
+ document.getElementById('studentGrade').focus();
+}
+function selectedBook(){const book=GUTENBERG_BOOKS.find(book=>String(book.id)===document.getElementById('bookSelect').value);return book&&gradeEligible(book)?book:null;}
+
 function preferredSection(book){const index=book?.sections?.findIndex(section=>!section.title.startsWith('Opening pages'))??0;return Math.max(0,index);}
 function updateNav(){
  const book=selectedBook(), sel=document.getElementById('sectionSelect');
@@ -531,10 +614,10 @@ function renderBooks(){
  const query=document.getElementById('bookSearch').value.trim().toLowerCase();
  const author=document.getElementById('bookAuthor').value,genre=document.getElementById('bookGenre').value;
  const previous=select.value;
- const matches=GUTENBERG_BOOKS.filter(book=>(band==='all'||book.band===band||(book.bands||[]).includes(band))&&(author==='all'||book.author===author)&&(genre==='all'||book.genre===genre)&&(!query||[book.title,book.author,book.genre,book.summary].join(' ').toLowerCase().includes(query))).sort((a,b)=>a.title.localeCompare(b.title));
+ const matches=GUTENBERG_BOOKS.filter(book=>gradeEligible(book)&&(band==='all'||book.band===band)&&(author==='all'||book.author===author)&&(genre==='all'||book.genre===genre)&&(!query||[book.title,book.author,book.genre,book.summary].join(' ').toLowerCase().includes(query))).sort((a,b)=>a.title.localeCompare(b.title));
  matches.forEach(book=>select.add(new Option(book.title+' — '+book.author,String(book.id))));
  if(matches.some(b=>String(b.id)===previous))select.value=previous;
- document.getElementById('bookResultCount').textContent=matches.length+' of '+GUTENBERG_BOOKS.length+' books';
+ document.getElementById('bookResultCount').textContent=matches.length+' matching · '+GUTENBERG_BOOKS.filter(gradeEligible).length+' available for your grade';
  renderSections();
 }
 function renderSections(){
@@ -570,14 +653,14 @@ function sendToReader(text,label){
  updateReadingEstimates();
 }
 async function loadSelection(whole=false){
- const book=selectedBook();if(!book)return;
+ const book=selectedBook();if(!book||!gradeEligible(book))return;
  const index=Number(document.getElementById('sectionSelect').value)||0;
  const seq=++currentBookRequest;
  const btn=document.getElementById(whole?'loadOriginal':'loadPractice');
  btn.disabled=true;libraryStatus(`Loading ${book.title} from the classroom library…`);
  try{
   const lines=await getLines(book);
-  if(seq!==currentBookRequest||selectedBook()?.id!==book.id)return;
+  if(seq!==currentBookRequest||selectedBook()?.id!==book.id||!gradeEligible(book))return;
   const chosen=book.sections[index];
   const text=whole?lines.slice(book.sections[0].start,book.sections[book.sections.length-1].end).join('\n'):lines.slice(chosen.start,chosen.end).join('\n');
   if(!text.trim())throw new Error('Selected section is empty');
@@ -610,6 +693,10 @@ async function uploadOriginal(evt){
  }catch(err){libraryStatus('Could not open the uploaded text file: '+err.message,true);}
 }
 function initBookLibrary(){
+ document.getElementById('studentGrade').addEventListener('change',configureGradePicker);
+ document.getElementById('gradePromise').addEventListener('change',configureGradePicker);
+ document.getElementById('confirmGrade').addEventListener('click',acknowledgeGrade);
+ document.getElementById('changeGrade').addEventListener('click',restartGradeAgreement);
  for(const id of ['bookAuthor','bookGenre','bookSearch'])document.getElementById(id).addEventListener(id==='bookSearch'?'input':'change',renderBooks);
  for(const [id,key] of [['bookAuthor','author'],['bookGenre','genre']]){
   const el=document.getElementById(id);
@@ -625,6 +712,7 @@ function initBookLibrary(){
  document.getElementById('uploadBook').addEventListener('change',uploadOriginal);
  document.getElementById('textInput').addEventListener('input',event=>{if(event.isTrusted){loadedBookId=null;loadedSectionIndex=-1;updateReadingEstimates();}});
  for(const id of ['startWPM','increasePercent'])document.getElementById(id).addEventListener('input',updateReadingEstimates);
+ configureGradePicker();
  renderBooks();
 }
 

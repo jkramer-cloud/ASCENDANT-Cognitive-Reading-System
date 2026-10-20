@@ -265,6 +265,34 @@ body.light #centerLine {
     font-size: 15px;
   }
 }
+
+/* Built-in book chooser — preserves original speed-reader layout */
+.library-panel{text-align:left;border:1px solid #486d7b;background:linear-gradient(140deg,var(--panel),color-mix(in srgb,var(--panel) 85%,#163e55));box-shadow:0 12px 35px #0002}
+.library-heading{display:flex;gap:13px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.library-heading h2{margin:0;font-size:23px}
+.library-heading p{margin:4px 0;color:var(--muted);font-size:14px}
+.library-chip{background:#146454;color:#fff;padding:5px 10px;border-radius:22px;font-weight:bold;font-size:12px}
+.library-grid{display:grid;grid-template-columns: minmax(130px,.8fr) minmax(180px,1.5fr) minmax(170px,1.3fr);gap:12px;margin-top:16px}
+.library-grid label{display:flex;flex-direction:column;gap:6px;font-weight:bold;font-size:14px}
+.library-grid select{border:1px solid #638194;background:var(--bg);color:var(--text);min-height:42px;width:100%;max-width:100%}
+.library-actions{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-top:15px}
+.library-actions button{min-height:44px;padding:9px 13px}
+.library-primary{background:#137c65;color:white;font-weight:700}
+.library-secondary{background:#245785;color:white}
+.library-outline{background:transparent;border:1px solid #668ea6;color:var(--text);text-decoration:none;padding:10px 12px;border-radius:8px;font-weight:bold;display:inline-flex;align-items:center;min-height:44px}
+.library-outline:hover{background:#53768c36}
+.library-description{margin-top:12px;border:1px solid #58718870;padding:10px 12px;border-radius:9px;font-size:14px;color:var(--muted);line-height:1.6}
+.library-status{margin-top:12px;min-height:24px;font-weight:bold;font-size:14px;color:#74d5bb}
+body.light .library-status{color:#17694d}
+.library-status.error{color:#ff9797}body.light .library-status.error{color:#8f2323}
+.library-note{font-size:13px!important;line-height:1.55;color:var(--muted);margin:12px 0 0}
+.library-footer{display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-top:10px}
+.library-footer input{font-size:13px;width:auto;max-width:240px}
+.library-footer label{font-weight:bold;font-size:13px}
+#textInput{box-sizing:border-box;color:#121820;background:#fff}
+body.light #textInput{background:#fff}
+@media(max-width:760px){.library-grid{grid-template-columns:1fr}.library-actions>*{width:100%}.library-heading{align-items:flex-start}.library-footer{display:block}.library-footer label{display:block;margin-bottom:9px}}
+
 </style>
 </head>
 
@@ -282,6 +310,26 @@ body.light #centerLine {
 
 <h1>A.S.C.E.N.D.A.N.T. Reader</h1>
 <p class="small">Adaptive Serialized Cognitive Enhancement for Neural Decoding and Accelerated Narrative Training</p>
+
+
+<section class="panel library-panel" aria-labelledby="libraryTitle">
+ <div class="library-heading"><div><h2 id="libraryTitle">📚 Choose a Reading</h2><p>Pick a grade range and a classic book, or paste your own text below.</p></div><span class="library-chip">12 classic titles</span></div>
+ <div class="library-grid">
+  <label for="gradeBand">Grade range <select id="gradeBand"><option value="1-2">Grades 1–2</option><option value="3-5" selected>Grades 3–5</option><option value="6-8">Grades 6–8</option><option value="9-12">Grades 9–12</option></select></label>
+  <label for="bookSelect">Choose a book <select id="bookSelect"></select></label>
+  <label for="sectionSelect">Reading section <select id="sectionSelect"></select></label>
+ </div>
+ <div id="bookDescription" class="library-description" aria-live="polite"></div>
+ <div class="library-actions">
+  <button type="button" id="loadPractice" class="library-primary">Load practice passage ↓</button>
+  <button type="button" id="loadOriginal" class="library-secondary">Try full original text online</button>
+  <a id="gutenbergLink" class="library-outline" target="_blank" rel="noopener noreferrer" href="https://www.gutenberg.org/">View original on Gutenberg ↗</a>
+ </div>
+ <div class="library-footer"><label for="uploadBook">Or load a downloaded book (.txt): <input type="file" id="uploadBook" accept=".txt,text/plain"></label><span class="small" id="bookWordCount"></span></div>
+ <div id="libraryStatus" class="library-status" role="status" aria-live="polite"></div>
+ <p class="library-note">The ready-to-use practice passages are <strong>new, shortened adaptations</strong> of public-domain stories, not the original books' wording. Use “Try full original text online” or download Plain Text from the linked Project Gutenberg page and choose the file above to read the authentic complete book. The online option depends on Gutenberg allowing browser requests. Grade ranges are recommendations, not certified reading levels; teachers should preview selections. Public-domain status shown is for the United States.</p>
+</section>
+<h2 style="margin:20px auto 0;max-width:1020px;text-align:left;font-size:19px">Your Reading Text</h2>
 
 <textarea id="textInput" placeholder="Paste reading text here..."></textarea>
 
@@ -370,6 +418,110 @@ body.light #centerLine {
 </div>
 
 <script>
+
+// Curated public-domain book directory. Preloaded practice passages are clearly labeled original adaptations.
+const GUTENBERG_BOOKS = [{"id":14838,"title":"The Tale of Peter Rabbit","author":"Beatrix Potter","band":"1-2","genre":"Animal story","summary":"A curious rabbit explores a garden where he should not go.","sections":[["A Warning at Home","Peter is a young rabbit who lives with his mother, his brother, and his sisters. One morning, his mother tells the rabbits they may play in the fields. She gives one important warning: they must stay away from Mr. McGregor’s garden. Peter listens, but the garden sounds exciting. He wonders what it looks like behind the wall. While the other rabbits take a safe path, Peter follows his curiosity. Soon he is near a gate, thinking about all the vegetables growing inside. He knows the rule. He must decide whether to follow it."],["A Difficult Escape","Peter slips into the garden and finds more vegetables than he imagined. But his adventure changes when Mr. McGregor spots him. Peter runs between plants and under bushes, searching for a way out. He loses his way and feels frightened. The garden that first seemed wonderful now seems enormous. Peter begins to understand why his mother warned him. After a tiring search, he sees an opening that might lead home. The most important thing is no longer finding a snack. It is getting back to his family safely."]]},{"id":14407,"title":"The Tale of Benjamin Bunny","author":"Beatrix Potter","band":"1-2","genre":"Animal adventure","summary":"Two young rabbits return to a familiar garden to recover lost belongings.","sections":[["A Friend Comes Calling","Benjamin Bunny visits his cousin Peter and hears about Peter’s trouble in the vegetable garden. Peter left his jacket and shoes behind when he ran away. Benjamin thinks they can get the clothes back. Peter is not so sure. He remembers how frightened he felt when the gardener chased him. Benjamin has a plan, though, and he asks Peter to come with him. The two rabbits head toward the garden together. They look for a quiet way inside. Peter hopes the adventure will be quick. Benjamin is much more confident."],["The Basket Surprise","Inside the garden, the cousins find Peter’s lost clothing. That should be the end of the adventure, but Benjamin wants to explore a little longer. Before they can leave, the rabbits hear a sound nearby. They hide beneath a basket and wait. The hiding place feels safe for a moment. Then it becomes clear that being trapped is a problem of its own. Peter and Benjamin must be patient and hope someone notices where they are. Their adventure teaches them that a brave idea still needs a careful plan."]]},{"id":14814,"title":"The Tale of Jemima Puddle-Duck","author":"Beatrix Potter","band":"1-2","genre":"Animal fable","summary":"A duck searches for a nesting spot and learns to question a stranger’s promises.","sections":[["The Quiet Nest","Jemima is a duck who wishes to sit on her own eggs in peace. On the farm, people keep moving the eggs, so she looks for a place far away. She flies over the fields and finds a quiet patch of woods. There she meets a stranger who speaks politely and offers to help. Jemima is pleased. The stranger says there is a comfortable place where she can build a nest. Jemima imagines resting without anyone disturbing her. She does not yet know whether the stranger’s offer is kind or dangerous."],["A Reason to Be Careful","Jemima visits the place the stranger has chosen. At first, everything seems pleasant. But some details make the situation less comfortable. The stranger asks odd questions and seems far more interested in Jemima than in helping her. A friendly voice does not always prove that someone has good intentions. The other animals on the farm would recognize some of these warning signs. Jemima must learn to pay attention to what people do, not only what they say. Her story is about trust, caution, and finding help from those who truly care."]]},{"id":55,"title":"The Wonderful Wizard of Oz","author":"L. Frank Baum","band":"3-5","genre":"Fantasy","summary":"A girl is carried away by a storm and sets off on a journey home.","sections":[["The Storm","Dorothy lives with her aunt and uncle on a farm in Kansas. The prairie stretches out in every direction, and strong winds sometimes sweep across the land. One day, the sky changes quickly. Her family hurries toward shelter, but Dorothy is caught inside the house as a powerful cyclone approaches. The wind lifts the little building high above the ground. Dorothy can feel it moving, yet she has no idea where it will land. Even her brave dog, Toto, seems unsure what is happening. When the house finally becomes still, Dorothy knows she is no longer in Kansas."],["The Road Ahead","Dorothy steps outside and discovers an unfamiliar country full of color and strange people. She learns that a great wizard may be able to help her return home. To find him, she must follow a road that crosses forests and fields. The journey feels too large for one person, but Dorothy begins anyway. Along the way she meets travelers with problems of their own. They agree to help each other. Dorothy discovers that friendship can make difficult journeys less frightening, even when no one knows exactly what will happen next."]]},{"id":11,"title":"Alice's Adventures in Wonderland","author":"Lewis Carroll","band":"3-5","genre":"Fantasy / wordplay","summary":"A curious girl follows a white rabbit into a puzzling world.","sections":[["The White Rabbit","Alice is sitting beside her sister when she sees something extraordinary: a white rabbit hurrying past while worrying about the time. The rabbit acts as though it has somewhere important to be. Alice has never seen an animal behave in quite that way. Curious, she follows it and discovers a hole leading underground. She climbs inside and soon finds herself falling through a surprisingly deep space. Objects line the walls around her, and she has time to wonder where the strange journey will end. Instead of being frightened, Alice wants to know what she will discover."],["A Room of Doors","Alice arrives in a long hall filled with locked doors. On a little table she finds a key, but the door it opens is far too small for her to enter. Beyond the doorway she can see a beautiful garden. The garden looks peaceful, and she wants to reach it. Unfortunately, nothing in this new place works the way Alice expects. She must observe her surroundings, try ideas, and learn from mistakes. Wonderland seems full of puzzles. Each solution leads her toward another curious question."]]},{"id":271,"title":"Black Beauty","author":"Anna Sewell","band":"3-5","genre":"Animal story / empathy","summary":"A horse tells the story of his life and the people who care for him.","sections":[["A Happy Beginning","Black Beauty remembers the fields where he spent his earliest days. His mother teaches him to be gentle, steady, and careful. He loves running in the grass and feeling the fresh air. As he grows, he begins to learn how to work with people. Some are patient teachers who help him understand what they want. Others are less thoughtful. Beauty slowly discovers that a horse depends on the choices of the people around him. His first home teaches him what kindness feels like, and he hopes that kindness will follow him wherever he goes."],["The Meaning of Care","As Black Beauty travels to new homes, he sees that people treat working horses in different ways. A careful driver gives an animal time to rest and notices when something is wrong. A careless driver thinks only about speed or appearance. Beauty cannot explain his feelings in words to the humans around him, but he notices every difference. He learns that small acts of patience can prevent suffering. By telling the story from a horse’s point of view, the book asks readers to think about responsibility for creatures that cannot speak for themselves."]]},{"id":17396,"title":"The Secret Garden","author":"Frances Hodgson Burnett","band":"6-8","genre":"Mystery / growth","summary":"An isolated girl discovers a neglected garden and begins to change.","sections":[["The Locked Door","Mary arrives at an enormous house on the moors of northern England. The halls seem endless, and the people who live there keep many things to themselves. During her walks, Mary hears about a garden that has been closed for years. The idea catches her attention because no one will explain exactly what happened there. She searches the grounds and studies the walls, gates, and paths. Each small discovery raises another question. For perhaps the first time, Mary is interested in something beyond her own comfort. A secret place is beginning to draw her into the world around her."],["A Place That Can Change","When Mary finds a way into the hidden garden, she sees plants that appear dead beneath the cold soil. Yet some branches show signs of life. She begins clearing weeds and caring for the beds, often with the help of new friends. Working in the garden requires patience and attention. Mary cannot make flowers bloom instantly, but she can create the conditions they need. Her changing relationship with the garden mirrors changes in her own behavior. She becomes more curious, generous, and willing to trust others. What first seemed like a mystery becomes a place of renewal."]]},{"id":120,"title":"Treasure Island","author":"Robert Louis Stevenson","band":"6-8","genre":"Adventure / suspense","summary":"A boy discovers a treasure map and sails toward a dangerous island.","sections":[["The Mysterious Map","Jim Hawkins lives at an inn near the sea, where he meets travelers with unusual stories. One visitor carries a sea chest and seems nervous whenever strangers arrive. After a series of frightening events, Jim discovers that the chest contains a map marked with the location of buried treasure. The map promises adventure, but it also attracts people willing to lie or fight to possess it. Jim must decide whom to trust. He is young and inexperienced, yet the choices ahead of him may determine the safety of everyone involved."],["Voices on the Ship","Jim joins an expedition sailing toward the island. At first, the journey seems orderly. The captain commands the ship, the crew works, and the passengers study the map. But Jim begins to notice that some sailors act differently when they believe no one is listening. A conversation overheard by chance reveals that the crew is not as loyal as it appears. Jim realizes that the expedition may be in danger from people already aboard. Instead of rushing to accuse someone, he must remember the exact words he heard and decide whom he can warn."]]},{"id":45,"title":"Anne of Green Gables","author":"L. M. Montgomery","band":"6-8","genre":"Coming-of-age","summary":"An imaginative orphan arrives at a farm and transforms the lives around her.","sections":[["An Unexpected Arrival","Marilla and Matthew Cuthbert expect to welcome a boy who can help with chores at Green Gables. Instead, Matthew meets Anne, a talkative girl with an extraordinary imagination. Anne delights in the countryside around her and quickly gives beautiful new names to ordinary places. Matthew listens, uncertain how to tell her that a mistake may have been made. Anne’s excitement makes the situation more difficult. She has been searching for a place to belong, and Green Gables already seems like the home she has imagined."],["Making a Home","Anne’s strong feelings and quick imagination sometimes lead her into trouble. She may speak before thinking or turn an ordinary disagreement into a dramatic event. Yet she is also eager to learn, to apologize, and to become a true friend. Marilla is practical, while Anne dreams in colorful pictures. Their different personalities create both conflict and affection. As Anne grows, she discovers that belonging to a community means listening as well as speaking. The people of Green Gables gradually learn that the girl they did not expect has brought something valuable to their home."]]},{"id":35,"title":"The Time Machine","author":"H. G. Wells","band":"9-12","genre":"Science fiction","summary":"An inventor travels into the distant future and questions what progress means.","sections":[["A Strange Invention","At a gathering of friends, an inventive scientist explains an unusual idea: time could be treated as another dimension through which a traveler might move. His guests are skeptical. They understand movement through space, but traveling through years seems impossible. The scientist demonstrates a small model and describes a larger machine he has built. Some listeners search for a trick; others begin to wonder whether his theory could be true. The disagreement is as important as the invention itself. The visitors must decide what evidence would convince them of a claim that challenges everyday experience."],["A Different Future","The traveler journeys far beyond his own era and finds a world he does not understand. Its peaceful appearance hides complicated social divisions. The people he meets seem at first to have escaped struggle, yet other evidence suggests that comfort has come at a cost. Rather than treating the future as a simple triumph of technology, he observes carefully and revises his first conclusions. The story asks whether progress is always an improvement and whether appearances can reveal the deeper structure of a society."]]},{"id":84,"title":"Frankenstein","author":"Mary Shelley","band":"9-12","genre":"Gothic science fiction","summary":"A young scientist considers the consequences of creating life.","sections":[["The Search for Knowledge","Victor Frankenstein becomes fascinated by the hidden principles that govern nature. He studies science with intense determination and begins to believe that a discovery could transform what people think is possible. His curiosity is powerful, but it grows into an obsession that separates him from friends and family. He works alone and does not fully consider what responsibility might follow a successful experiment. The closer he comes to his goal, the less attention he gives to the ordinary human connections that once sustained him. The question is no longer only whether he can create life, but whether he is prepared to care for what he creates."],["A Responsibility Avoided","When Victor confronts the consequences of his experiment, his first reaction is fear. He cannot reconcile the living being before him with the achievement he imagined. Rather than seeking understanding, he withdraws. His decision leaves another creature to face the world without guidance, affection, or protection. The story develops its conflict through different viewpoints, asking readers to consider both the creator’s ambitions and the created being’s experience. It raises difficult questions about neglect, judgment, and the limits of scientific ambition."]]},{"id":36,"title":"The War of the Worlds","author":"H. G. Wells","band":"9-12","genre":"Science fiction / conflict","summary":"A narrator witnesses an invasion that overturns human confidence.","sections":[["An Unwelcome Visitor","A strange object falls from the sky near an English town. Curious people gather to investigate, wondering whether it is a meteorite or some unfamiliar machine. The object seems silent at first. Its metal surface and unusual shape invite speculation, but no one fully understands what has arrived. Some observers treat it as a scientific curiosity, while others begin to worry. When signs of movement appear, the crowd realizes that the object may contain something alive. Their ordinary assumptions about safety and human control are about to be tested."],["A World Reconsidered","As the invaders advance, familiar roads, towns, and institutions become uncertain. The narrator sees people react in different ways: some flee immediately, some wait for reliable information, and others refuse to believe danger is close. The crisis exposes how quickly confidence can collapse when people encounter a force they do not understand. The novel repeatedly shifts attention from the invaders’ technology to the choices made by frightened human beings. It asks readers to examine whose perspective is considered important and how a powerful civilization might appear to those with less power."]]}];
+let currentOriginalText = '';
+let originalSections = [];
+let originalBookId = null;
+function textWordCount(text) {return (text.trim().match(/\S+/g)||[]).length;}
+function libraryStatus(text,isError=false){let x=document.getElementById('libraryStatus');x.textContent=text;x.classList.toggle('error',isError);}
+function selectedBook(){return GUTENBERG_BOOKS.find(b=>String(b.id)===document.getElementById('bookSelect').value)||null;}
+function renderBooks(){
+ const band=document.getElementById('gradeBand').value;
+ const select=document.getElementById('bookSelect');
+ select.replaceChildren();
+ GUTENBERG_BOOKS.filter(b=>b.band===band).forEach(b=>select.add(new Option(b.title+' — '+b.author,String(b.id))));
+ originalBookId=null;currentOriginalText='';originalSections=[];
+ renderSections();
+}
+function renderSections(){
+ const book=selectedBook();const select=document.getElementById('sectionSelect');select.replaceChildren();
+ if(!book)return;
+ const isOriginal=originalBookId===book.id && originalSections.length;
+ const entries=isOriginal?originalSections:book.sections;
+ entries.forEach((section,i)=>select.add(new Option(section[0]+' · '+textWordCount(section[1]).toLocaleString()+' words',String(i))));
+ document.getElementById('bookDescription').textContent=book.summary+' · '+book.genre+' · '+(isOriginal?'Original Gutenberg text ready; choose a section.':'Original, shortened study adaptation ready to load.')+' These grade bands are approximate.';
+ document.getElementById('gutenbergLink').href='https://www.gutenberg.org/ebooks/'+book.id;
+ document.getElementById('bookWordCount').textContent=entries.length+' reading section'+(entries.length===1?'':'s');
+ libraryStatus('');
+}
+function sendToReader(text,label){
+ if(!text||!text.trim()){libraryStatus('This selection has no text.',true);return;}
+ pauseReader();
+ resetReader();
+ const input=document.getElementById('textInput');input.value=text.trim();
+ input.dispatchEvent(new Event('input',{bubbles:true}));
+ libraryStatus('Loaded '+label+' — '+textWordCount(text).toLocaleString()+' words. Press Start when ready.');
+}
+function loadSelection(){
+ const book=selectedBook();if(!book)return;
+ const original=originalBookId===book.id&&originalSections.length;
+ const entries=original?originalSections:book.sections;
+ const selected=entries[+document.getElementById('sectionSelect').value];if(!selected)return;
+ sendToReader(selected[1],book.title+': '+selected[0]+(original?' (original text)':' (adapted passage)'));
+}
+function stripGutenberg(text){
+ const start=/\*\*\*\s*START OF (?:THE|THIS) PROJECT GUTENBERG EBOOK[^\n]*\*\*\*/i.exec(text);
+ if(start)text=text.slice(start.index+start[0].length);
+ const end=/\*\*\*\s*END OF (?:THE|THIS) PROJECT GUTENBERG EBOOK/i.exec(text);
+ if(end)text=text.slice(0,end.index);
+ return text.replace(/\r\n?/g,'\n').trim();
+}
+function segmentOriginal(text){
+ // Divide a Gutenberg book into manageable consecutive sections. No claims of exact chapter boundaries.
+ const clean=stripGutenberg(text);
+ const tokens=clean.split(/\s+/).filter(Boolean);
+ const result=[]; const size=1250;
+ for(let i=0;i<tokens.length;i+=size){
+  result.push(['Part '+(Math.floor(i/size)+1),tokens.slice(i,i+size).join(' ')]);
+ }
+ return result;
+}
+async function fetchOriginal(){
+ const book=selectedBook();if(!book)return;
+ const button=document.getElementById('loadOriginal');button.disabled=true;
+ libraryStatus('Trying to retrieve the original text from Project Gutenberg…');
+ try{
+  const response=await fetch('https://www.gutenberg.org/cache/epub/'+book.id+'/pg'+book.id+'.txt',{mode:'cors',credentials:'omit',signal:AbortSignal.timeout(13000)});
+  if(!response.ok)throw new Error('HTTP '+response.status);
+  const text=await response.text();
+  if(text.length<1200||/^\s*<!doctype html|^\s*<html/i.test(text))throw new Error('No plain-text book received');
+  originalSections=segmentOriginal(text);
+  if(!originalSections.length)throw new Error('No reading sections were detected');
+  originalBookId=book.id;
+  renderSections();
+  document.getElementById('loadPractice').textContent='Load selected original section ↓';
+  libraryStatus('Full original loaded: '+textWordCount(text).toLocaleString()+' words in '+originalSections.length+' sections. Choose a part and press Load selected original section.');
+ }catch(err){
+  libraryStatus('Online loading was blocked or unavailable. Use “View original on Gutenberg” → download Plain Text → upload the .txt file here. Your practice passages still work offline.',true);
+ }finally{button.disabled=false;}
+}
+async function uploadOriginal(evt){
+ const file=evt.target.files?.[0];if(!file)return;
+ if(file.size>9000000){libraryStatus('Please choose a plain-text file under 9 MB.',true);return;}
+ try{
+  const text=await file.text();
+  if(!text.trim())throw new Error('Empty text file');
+  originalSections=segmentOriginal(text);
+  originalBookId=selectedBook()?.id||null;
+  // Also works for arbitrary teacher-supplied book files; passages become immediate text.
+  const whole=stripGutenberg(text);
+  if(!originalBookId){sendToReader(whole,file.name);return;}
+  renderSections();
+  document.getElementById('loadPractice').textContent='Load selected original section ↓';
+  libraryStatus('Uploaded '+file.name+': '+textWordCount(whole).toLocaleString()+' words. Choose a section and press Load.');
+ }catch(err){libraryStatus('Could not read the file. Choose a UTF-8 plain-text (.txt) book.',true);}
+}
+function initBookLibrary(){
+ document.getElementById('gradeBand').addEventListener('change',()=>{document.getElementById('loadPractice').textContent='Load practice passage ↓';renderBooks()});
+ document.getElementById('bookSelect').addEventListener('change',()=>{originalBookId=null;originalSections=[];document.getElementById('loadPractice').textContent='Load practice passage ↓';renderSections()});
+ document.getElementById('loadPractice').addEventListener('click',loadSelection);
+ document.getElementById('loadOriginal').addEventListener('click',fetchOriginal);
+ document.getElementById('uploadBook').addEventListener('change',uploadOriginal);
+ renderBooks();
+}
+
 let words = [];
 let index = 0;
 let timer = null;
@@ -572,30 +724,19 @@ function calculateDelay(chunk, currentWPM, chunkSize) {
   return delay;
 }
 
+function escapeReaderChar(c){return ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]||c);}
 function formatWord(word) {
   if (word === "¶") return "<span class='highlight'>¶</span>";
-
   const clean = word.replace(/[^a-zA-Z]/g, "");
-
-  if (clean.length < 3) return word;
-
+  if (clean.length < 3) return [...word].map(escapeReaderChar).join("");
   const pivot = Math.floor(clean.length / 2);
-  let letterCount = -1;
-  let output = "";
-
-  for (let i = 0; i < word.length; i++) {
-    if (/[a-zA-Z]/.test(word[i])) {
-      letterCount++;
-      if (letterCount === pivot) {
-        output += "<span class='highlight'>" + word[i] + "</span>";
-      } else {
-        output += word[i];
-      }
-    } else {
-      output += word[i];
-    }
+  let count = -1,output="";
+  for(const char of word){
+    if (/[a-zA-Z]/.test(char)) {
+      count++;
+      output += count === pivot ? "<span class='highlight'>"+escapeReaderChar(char)+"</span>" : escapeReaderChar(char);
+    } else output += escapeReaderChar(char);
   }
-
   return output;
 }
 
@@ -679,6 +820,7 @@ function changeFont() {
 }
 
 document.addEventListener("keydown", function(event) {
+  if (event.target.closest("textarea, input, select, [contenteditable]")) return;
   if (event.code === "Space") {
     event.preventDefault();
     if (paused) {
@@ -697,7 +839,7 @@ document.addEventListener("keydown", function(event) {
   }
 });
 
-window.onload = runBootSequence;
+window.onload = () => { initBookLibrary(); runBootSequence(); };
 </script>
 
 </body>
